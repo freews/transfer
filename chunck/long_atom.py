@@ -1,0 +1,92 @@
+def add_long_atom(self, data: bytes, is_bytes: bool = True) -> 'TCGPayloadBuilder':
+    """
+    Long Atom 추가 (2048 ~ 16,777,215 bytes)
+    
+    Header (4 bytes):
+      Byte 0: 1110 00 B S  →  0xE0 | (B<<1) | S
+      Byte 1: n[23:16]
+      Byte 2: n[15:8]
+      Byte 3: n[7:0]
+    
+    TCG Core Spec Table 12-13 (Section 3.2.2.3.1.4)
+    """
+    length = len(data)
+    if not (1 <= length <= 0xFFFFFF):
+        raise ValueError(f"Long atom length out of range: {length}")
+    
+    b_bit = 1 if is_bytes else 0  # 1=byte sequence, 0=integer
+    s_bit = 0                     # 0=unsigned/final, 1=signed/continued
+    
+    byte0 = 0xE0 | (b_bit << 1) | s_bit
+    byte1 = (length >> 16) & 0xFF
+    byte2 = (length >> 8) & 0xFF
+    byte3 = length & 0xFF
+    
+    self.payload.extend([byte0, byte1, byte2, byte3])
+    self.payload.extend(data)
+    return self
+
+    def add_bytes(self, data: bytes) -> 'TCGPayloadBuilder':
+    """바이트 데이터 추가 (길이에 따라 자동 선택)"""
+    length = len(data)
+    if length == 0:
+        self.add_token(Token.EMPTY_ATOM)
+    elif length <= 15:          # Short Atom: 0~15 bytes (기존 63은 스펙 오류였음*)
+        self.add_short_atom(data)
+    elif length <= 2047:
+        self.add_medium_atom(data)
+    elif length <= 0xFFFFFF:
+        self.add_long_atom(data)
+    else:
+        raise ValueError(f"Data too large: {length} bytes")
+    return self
+
+
+    def add_short_atom(self, data: bytes) -> 'TCGPayloadBuilder':
+    """Short Atom 추가 (0~15 bytes) — 스펙 Table 07: length field는 4비트"""
+    length = len(data)
+    if length == 0:
+        # 0-length bytes: 0xA0 (Table 09: 1 0 1 0 0 0 0 0)
+        self.payload.append(0xA0)
+    elif 1 <= length <= 15:
+        # 0x80 | 0x20 (B=1, byte sequence) | length
+        self.payload.append(0x80 | 0x20 | length)
+        self.payload.extend(data)
+    else:
+        raise ValueError(f"Short atom length out of range: {length}")
+    return self
+
+    # long atome parsing 
+
+    # Long Atom: 0xE0~0xE3
+elif 0xE0 <= token <= 0xE3:
+    """
+    Long Atom 파싱
+    
+    Header (4 bytes):
+      Byte 0: 1110 00 B S  →  token = 0xE0 | (B<<1) | S
+      Byte 1: n[23:16]
+      Byte 2: n[15:8]
+      Byte 3: n[7:0]
+    
+    TCG Core Spec Table 12-13 (Section 3.2.2.3.1.4)
+    """
+    if self.pos + 3 >= len(self.data):
+        raise ValueError("Long atom header truncated")
+    
+    # b_bit = (token >> 1) & 0x01  # 필요시 integer/bytes 구분에 사용
+    # s_bit = token & 0x01          # 필요시 signed/continued 구분에 사용
+    
+    byte1 = self.data[self.pos + 1]
+    byte2 = self.data[self.pos + 2]
+    byte3 = self.data[self.pos + 3]
+    length = (byte1 << 16) | (byte2 << 8) | byte3
+    
+    self.pos += 4  # 4바이트 헤더 소비
+    
+    if self.pos + length > len(self.data):
+        raise ValueError(f"Long atom data truncated: need {length}, have {len(self.data) - self.pos}")
+    
+    data = self.data[self.pos:self.pos + length]
+    self.pos += length
+    return data

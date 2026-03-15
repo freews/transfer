@@ -1,0 +1,135 @@
+================================================================================
+  TCG Ruby / Opal / Opalite / Pyrite 개발을 위한 필수 문서 전체 목록
+================================================================================
+  출처: trustedcomputinggroup.org  |  정리일: 2026-03-13
+================================================================================
+
+
+--------------------------------------------------------------------------------
+  Layer 1 — Foundation  (모든 SSC의 기반, 반드시 읽어야 함)
+--------------------------------------------------------------------------------
+
+1. TCG Storage Architecture Core Specification
+   버전 : v2.01
+   설명 : 토큰 인코딩, SP/Method/Session 구조, 전체 아키텍처의 뿌리.
+          모든 SSC가 이 문서를 참조한다.
+
+2. TCG Storage Interface Interactions Specification (SIIS)
+   버전 : v1.11 (2023)
+   설명 : NVMe/ATA/SCSI 등 인터페이스와 TCG 명령 간 매핑.
+          IF-SEND/IF-RECV, Protocol ID, ComID 처리.
+          NVMe 개발이라면 필수.
+
+
+--------------------------------------------------------------------------------
+  Layer 2 — SSC Specifications  (구현 대상에 따라 선택)
+--------------------------------------------------------------------------------
+
+3. TCG Storage SSC: Opal
+   버전 : v2.01 (현행) / v2.02 / v2.30 (draft)
+   특징 : 4 Admin / 8 User / 8 LBA Range / 10 MB DataStore / MBR Shadowing.
+          가장 풀(Full) 기능. PC 클라이언트 중심.
+
+4. TCG Storage SSC: Ruby
+   버전 : v1.00 (2022)
+   특징 : Opal 패밀리의 데이터센터/엔터프라이즈 버전.
+          1 Admin / 1 User(+옵션) / 128 KB DataStore.
+          PBA(Pre-Boot Authentication) 선택적.
+          Block SID + PSID Feature Set 필수.
+
+5. TCG Storage SSC: Opalite
+   버전 : v1.00
+   특징 : Opal 2.01의 서브셋.
+          1 Admin / 2 User / Global Range만 / 128 KB DataStore.
+
+6. TCG Storage SSC: Pyrite
+   버전 : v1.00 / v2.00 / v2.01
+   특징 : 암호화 없음 (Access Control만 제공).
+          v2.00부터 Data Removal 기능 추가.
+          Block SID Feature Set 필수.
+
+  NOTE: Ruby는 엔터프라이즈/데이터센터 NVMe SSD용으로 Opal과 프로토콜
+        호환이지만, PBA가 선택적이고 구조가 단순화되어 있다.
+
+
+--------------------------------------------------------------------------------
+  Layer 3 — Feature Sets  (SSC별 필수(M) / 선택(O) / 해당없음(-) )
+--------------------------------------------------------------------------------
+
+  Feature Set                              Opal      Ruby    Opalite  Pyrite
+  -----------------------------------------------------------------------
+  PSID Feature Set                          M*        M       권장     M**
+  Block SID Authentication Feature Set      M***      M       권장      M
+  Additional DataStore Tables Feature Set   M****     -        -        -
+  Shadow MBR for Multiple Namespaces        O         O        -        -
+  C_PIN Enhancements Feature Set            O         -        -        -
+  MEK Multiparty Authorization (MEK-MPA)    O         O        -        -
+  -----------------------------------------------------------------------
+  * Opal v2.01부터 필수
+  ** Pyrite v2.00부터 필수
+  *** Opal v2.02부터 필수
+  **** Opal v2.00부터 필수
+
+  Feature Set 개별 문서 목록:
+  - TCG Storage Opal SSC Feature Set: PSID  (v1.00)
+  - TCG Storage Feature Set: Block SID Authentication  (v1.00)
+  - TCG Storage Opal SSC Feature Set: Additional DataStore Tables  (v1.00)
+  - TCG Storage Opal Family Feature Set: Shadow MBR for Multiple Namespaces  (v1.00)
+  - TCG Storage Opal Family Feature Set: C_PIN Enhancements
+  - TCG Storage Feature Set: MEK Multiparty Authorization (MEK-MPA)  (v1.00, 2025)
+
+
+--------------------------------------------------------------------------------
+  Layer 4 — Test Cases & Application Notes  (검증/구현 참고)
+--------------------------------------------------------------------------------
+
+7. TCG Storage Opal Family Test Cases
+   설명 : Opal/Ruby/Opalite/Pyrite 공통 컴플라이언스 테스트 케이스.
+
+8. TCG Storage Application Note: Encrypting Drives Compliant with Opal SSC
+   설명 : StartSession → Authenticate → Get/Set 전체 워크플로 예제.
+
+9. TCG Storage Application Note: Encrypting Drives Compliant with Enterprise SSC
+   설명 : 엔터프라이즈 SSC 참고용 워크플로 예제.
+
+10. TCG Storage Opal Integration Guidelines
+    버전 : v1.00 r1.14
+    설명 : SID/MSID 소유권 이전, Block SID, Sleep Mode 처리 등
+           실제 통합 가이드라인.
+
+
+--------------------------------------------------------------------------------
+  SSC별 핵심 차이 요약
+--------------------------------------------------------------------------------
+
+                       Opal v2.01   Ruby v1.0   Opalite   Pyrite v2.0
+  암호화 (FDE)            필수         필수        필수        없음
+  MBR Shadowing          필수         선택적       필수       선택적
+  Admin 수                 4            1           1           1
+  User 수                  8          1+옵션        2           2
+  LBA Range 수            8+          1(+옵션)   Global만    Global만
+  DataStore 크기         10 MB        128 KB      128 KB      128 KB
+  PSID Feature Set        필수         필수        권장         필수
+  Block SID Feature Set   필수         필수        권장         필수
+  주요 용도            PC클라이언트  데이터센터NVMe  경량PC   암호화불필요지역
+
+
+--------------------------------------------------------------------------------
+  다운로드 위치
+--------------------------------------------------------------------------------
+
+  모든 문서는 아래 주소에서 무료로 다운로드 가능:
+
+    https://trustedcomputinggroup.org/specs/Storage
+
+  데이터센터 NVMe / OCP 환경에서의 우선순위:
+    1. Core Specification v2.01
+    2. SIIS v1.11
+    3. Ruby SSC v1.00
+    4. PSID Feature Set v1.00
+    5. Block SID Authentication Feature Set v1.00
+    6. Opal Family Test Cases
+
+================================================================================
+  END OF DOCUMENT
+================================================================================
