@@ -1,0 +1,73 @@
+Table table의 역할
+SP 안에 존재하는 모든 테이블들의 메타데이터(정보)를 저장하는 테이블입니다.
+예를 들어 Locking SP 안에 MBR 테이블, Locking 테이블, MBRControl 테이블 등이 있으면, Table table은 
+그것들 각각에 대한 정보(이름, row 수, row 크기 등)를 한 줄씩 저장하고 있는 "목차 테이블"입니다.
+
+스펙에서 정확한 근거 문장을 찾겠습니다.Searched project for “UID table 
+reference XX XX XX XX 00 00 00 00 last four bytes derived”Searched 
+project for “UID table reference XX XX XX XX 00 00 00 00 last four 
+bytes derived”근거는 Core Spec Section 3.2.5.3 입니다. 정확한 문장은 이것입니다:
+
+
+"The UID used to reference the actual table (rather than that table's
+ row in the Table table) SHALL be XX XX XX XX 00 00 00 00, where XX XX XX XX
+  are the last four bytes of the UID from that table's row in the Table table."
+
+
+이것을 MBR에 적용하면
+항목UID설명MBR의 Table Descriptor (Table table의 row)00 00 00 01 00 00 08 04상위 
+4바이트 = 00000001 (Table table), 하위 4바이트 = 00000804MBR Table 자체 참조 
+UID00 00 08 04 00 00 00 00Descriptor의 하위 4바이트 00000804를 상위로, 나머지는 0x00
+즉 규칙은:
+Descriptor UID : 00 00 00 01  [XX XX XX XX]
+                              ↓
+Table 자체 UID : [XX XX XX XX] 00 00 00 00
+"하위 4바이트를 상위로 올리고 하위를 0으로"라는 표현은 제 요약이었고, 
+스펙의 정확한 근거 위치는 Core Spec Section 3.2.5.3, item b-ii 입니다.
+
+
+
+MBR Table Descriptor Object UID : 00 00 00 01 00 00 08 04
+  → Table table(0x00000001) 내의 MBR row
+  → 스펙 Table 240에서: MBRContr... 바로 다음이 MBR (0x00000804)
+
+MBR Table 자체 UID             : 00 00 08 04 00 00 00 00
+  → Descriptor의 하위 4바이트를 상위로 올리고 하위를 0으로
+
+  Table table (Table 171):
+  Column 0x07 = Rows  (uinteger_4)  ← 이 값이 MBR Table의 총 바이트 수
+
+
+InvokingID  : 00 00 00 01 00 00 08 04   ← MBR Table Descriptor Object UID
+MethodID    : 00 00 00 06 00 00 00 16   ← Get method UID
+
+
+
+# Call token
+F8                          # Call token (0xF8)
+
+# InvokingID (MBR Table Descriptor Object)
+A8 00 00 00 01 00 00 08 04  # 8-byte UID token: 00 00 00 01 00 00 08 04
+
+# MethodID (Get)
+A8 00 00 00 06 00 00 00 16  # 8-byte UID token: 00 00 00 06 00 00 00 16
+
+# Method parameters start
+F0                          # Start List token
+
+  F2                        # Start Named token (cellblock 시작)
+    00                      # "startColumn" = 0 (name token, integer 0)
+    07                      # Column 0x07 (Rows)
+  F3                        # End Named token
+
+  F2                        # Start Named token
+    01                      # "endColumn" = 1
+    07                      # Column 0x07 (Rows) → startColumn과 동일하게
+  F3                        # End Named token
+
+F1                          # End List token
+
+F9                          # End of Data token
+
+# Status list
+F0 00 00 00 F1              # [ 0 0 0 ] = status OK

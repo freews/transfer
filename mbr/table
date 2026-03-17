@@ -1,0 +1,32 @@
+어떤  대는 MBR Table Descriptor Object 을 쓰고 어떤 때는 Table 을 쓰고 했갈리네 기준이 뭐지 ?
+
+11:42 PM
+명확하게 정리해드립니다.
+
+기준: 무엇을 하려는가?
+목적	사용하는 UID	이유
+MBR의 메타데이터 읽기 (크기, 쓰기단위 등)	MBR Table Descriptor	Table table의 row → object method
+MBR에 실제 데이터 읽기/쓰기	MBR Table 자체	byte table → table method
+두 UID의 차이
+MBR Table Descriptor  : 00 00 00 01 00 00 08 04  ← Table table 안의 row (object)
+MBR Table 자체        : 00 00 08 04 00 00 00 00  ← 실제 데이터가 담긴 byte table
+비유로 이해하기
+도서관 책장 카드(목록) ← MBR Table Descriptor
+  - 책 이름
+  - 총 페이지 수 (Rows)
+  - 한 번에 최소 써야 하는 페이지 수 (MandatoryWriteGranularity)
+
+실제 책 내용 ← MBR Table 자체
+  - 페이지 1, 2, 3 ... (실제 데이터)
+언제 어느 UID를 쓰는가?
+MBR Table Descriptor 00 00 00 01 00 00 08 04 사용
+→ Get  Rows                      (MBR 크기 확인)
+→ Get  MandatoryWriteGranularity (쓰기 단위 확인)
+→ Get  Kind, NumColumns 등       (테이블 속성 확인)
+MBR Table 자체 00 00 08 04 00 00 00 00 사용
+→ Set  Where=offset, Values=data  (실제 데이터 쓰기)
+→ Get  Where=offset, Length=n     (실제 데이터 읽기)
+UCT-10 에서의 적용
+Step 3: Get Rows          → 00 00 00 01 00 00 08 04  (Descriptor)
+Step 6: Set MAGIC_PATTERN → 00 00 08 04 00 00 00 00  (Table 자체)
+한 줄 요약: "정보를 읽을 때"는 Descriptor, "데이터를 읽고 쓸 때"는 Table 자체입니다.
